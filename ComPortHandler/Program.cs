@@ -1,24 +1,42 @@
 ﻿using ComPortHandler.Services;
-using Microsoft.Extensions.Configuration;
+using ComPortHandler.Services.Worker;
+using InfluxDB.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-using IHost host = Host.CreateDefaultBuilder()
+
+var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
-        services.AddSingleton<InfluxDBService>();
+        services.AddSingleton<InfluxDbService>();
+        services.AddSingleton<InfluxDBClient>();
+        services.AddSingleton<ComPortListenerService>();
+        services.AddSingleton<IDataWorker, DataWorker>();
+    })
+    .ConfigureLogging(loggingBuilder =>
+    {
+        loggingBuilder.AddFile($"{Directory.GetCurrentDirectory()}\\Logs\\log.txt");
     })
     .Build();
 
-var db = host.Services.GetRequiredService<InfluxDBService>();
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
+var comListener = host.Services.GetRequiredService<ComPortListenerService>();
 
-db.Write("");
+try
+{
+    comListener.OpenPortAndStartListen();
+    Console.ReadKey();
 
-var config = host.Services.GetRequiredService<IConfiguration>();
+    await comListener.ClosingPreparation();
+    comListener.ClosePort();
+}
+catch (Exception ex)
+{
+    logger.LogError(ex.Message);
+}
 
-int keyOneValue = config.GetValue<int>("KeyOne");
 
-Console.WriteLine(keyOneValue);
-Console.ReadKey();
+
 
 

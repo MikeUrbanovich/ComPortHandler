@@ -2,33 +2,46 @@
 using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Writes;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace ComPortHandler.Services
 {
-    public class InfluxDBService
+    public class InfluxDbService
     {
-        private readonly string _token;
-        private readonly string _host;
+        private readonly ILogger<InfluxDbService> _logger;
+        private readonly WriteApiAsync _writeAsync;
+        private readonly string _measurementName;
+        private readonly string _bucketName;
+        private readonly string _organizationName;
 
-        public InfluxDBService(IConfiguration configuration)
+        public InfluxDbService(IConfiguration configuration, ILogger<InfluxDbService> logger)
         {
-            _token = configuration.GetValue<string>("InfluxDB:Token");
-            _host = configuration.GetValue<string>("InfluxDB:Host");
+            _logger = logger;
+
+            var client = InfluxDBClientFactory.Create(
+                configuration.GetValue<string>("InfluxDB:Host"),
+                configuration.GetValue<string>("InfluxDB:Token")
+            );
+            _writeAsync = client.GetWriteApiAsync();
+            _measurementName = configuration.GetValue<string>("InfluxDB:Measurement");
+            _bucketName = configuration.GetValue<string>("InfluxDB:BucketName");
+            _organizationName = configuration.GetValue<string>("InfluxDB:OrganizationName");
         }
 
-        public void Write(string data)
+        public async Task WriteAsync(string portName, string data)
         {
-            using var client = InfluxDBClientFactory.Create(_host, _token);
-            using var write = client.GetWriteApi();
+            _logger.LogDebug($"Write data {data} to DB");
 
-            var point = PointData.Measurement("com_port_data")
-                    .Tag("PortNumber", "testNumber")
-                    .Field("PortData", 55D)
-                    .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
+            await Task.Delay(2000);
 
-            write.WritePoint(point, "new_test_bucket", "murbCompany");
+            var point = PointData
+                .Measurement(_measurementName)
+                .Tag("PortName", portName)
+                .Field("PortData", data)
+                .Timestamp(DateTime.UtcNow, WritePrecision.S);
 
-            var tmp = "";
+            await _writeAsync.WritePointAsync(point, _bucketName, _organizationName);
+            _logger.LogDebug("data was write");
         }
     }
 }
