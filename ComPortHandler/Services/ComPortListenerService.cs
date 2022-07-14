@@ -42,7 +42,8 @@ namespace ComPortHandler.Services
             _dataWorker.AddDataToBuffer(data);
         }
 
-        public void OpenPortAndStartListen()
+        //Open port and start data processing
+        public async Task OpenPortAndStartListenAsync()
         {
             if (_serialPort.IsOpen)
             {
@@ -51,12 +52,20 @@ namespace ComPortHandler.Services
 
             _serialPort.Open();
             _logger.LogInformation($"Port {_serialPort.PortName} is open. Start listening.");
-            _logger.LogInformation("Press any key to finish...");
+            _logger.LogInformation("Press the ENTER key to finish......");
 
-            _dataWorker.StartDataProcessing();
+            try
+            {
+                await _dataWorker.StartDataProcessingAsync();
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
         }
 
-        public async Task ClosingPreparation()
+        //Waiting for all data will be processed
+        public async Task ClosingPreparationAsync()
         {
             _serialPort.DataReceived -= DataReceivedHandler;
             _logger.LogInformation("Stop listening.");
@@ -67,7 +76,14 @@ namespace ComPortHandler.Services
                 _logger.LogInformation("Wait handling all data...");
             }
 
-            await _dataWorker.StopDataProcessing();
+            try
+            {
+                await _dataWorker.StopDataProcessingAsync();
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
         }
 
         public void ClosePort()

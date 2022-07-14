@@ -32,7 +32,7 @@ namespace ComPortHandler.Services
         {
             _logger.LogDebug($"Write data {data} to DB");
 
-            await Task.Delay(2000);
+            await Task.Delay(10000);
 
             var point = PointData
                 .Measurement(_measurementName)
@@ -40,8 +40,16 @@ namespace ComPortHandler.Services
                 .Field("PortData", data)
                 .Timestamp(DateTime.UtcNow, WritePrecision.S);
 
-            await _writeAsync.WritePointAsync(point, _bucketName, _organizationName);
-            _logger.LogDebug("data was write");
+            try
+            {
+                await _writeAsync.WritePointAsync(point, _bucketName, _organizationName);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Db task exception: {e.Message}");
+            }
+            
+            _logger.LogDebug("data was written");
         }
     }
 }

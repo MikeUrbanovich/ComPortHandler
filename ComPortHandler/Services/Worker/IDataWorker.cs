@@ -4,8 +4,8 @@
     {
         void AddDataToBuffer(string data);
         bool CheckDataInBuffer();
-        void StartDataProcessing();
-        Task StopDataProcessing();
+        Task StartDataProcessingAsync();
+        Task StopDataProcessingAsync();
 
     }
 }

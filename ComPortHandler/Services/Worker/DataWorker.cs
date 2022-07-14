@@ -22,7 +22,9 @@ namespace ComPortHandler.Services.Worker
             _logger = logger;
         }
 
-        public async void StartDataProcessing()
+        //Check data in buffer.
+        //If data exists, they will be deleted from buffer and passed like argument for WriteAsync db task.
+        public async Task StartDataProcessingAsync()
         {
             _logger.LogInformation("Start data processing");
 
@@ -36,16 +38,33 @@ namespace ComPortHandler.Services.Worker
                 }
 
                 DbTask = _influxDbService.WriteAsync(portName, _buffer.Dequeue());
-                await DbTask;
+                try
+                {
+                    await DbTask;
+                }
+                catch (Exception e)
+                {
+                    throw new Exception(e.Message);
+                }
             }
         }
 
-        public async Task StopDataProcessing()
+        //Wait last async db task.
+        public async Task StopDataProcessingAsync()
         {
-            await DbTask;
+            try
+            {
+                await DbTask;
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+
             _logger.LogInformation("Finish data processing");
         }
 
+        //Add valid data into buffer
         public void AddDataToBuffer(string data)
         {
             if (Validate(data))

@@ -1,16 +1,15 @@
 ﻿using ComPortHandler.Services;
 using ComPortHandler.Services.Worker;
-using InfluxDB.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 
+var s_cts = new CancellationTokenSource();
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
         services.AddSingleton<InfluxDbService>();
-        services.AddSingleton<InfluxDBClient>();
         services.AddSingleton<ComPortListenerService>();
         services.AddSingleton<IDataWorker, DataWorker>();
     })
@@ -25,10 +24,24 @@ var comListener = host.Services.GetRequiredService<ComPortListenerService>();
 
 try
 {
-    comListener.OpenPortAndStartListen();
-    Console.ReadKey();
+    var cancelTask = Task.Run(() =>
+    {
+        while (Console.ReadKey().Key != ConsoleKey.Enter)
+        {
+            Console.WriteLine("Press the ENTER key to finish...");
+        }
 
-    await comListener.ClosingPreparation();
+        Console.WriteLine("\nENTER key pressed: cancelling downloads.\n");
+        s_cts.Cancel();
+    });
+    var listeningTask = comListener.OpenPortAndStartListenAsync();
+
+    await Task.WhenAny(
+        cancelTask,
+        listeningTask
+    );
+
+    await comListener.ClosingPreparationAsync();
     comListener.ClosePort();
 }
 catch (Exception ex)
