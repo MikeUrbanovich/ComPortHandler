@@ -32,8 +32,6 @@ namespace ComPortHandler.Services
         {
             _logger.LogDebug($"Write data {data} to DB");
 
-            await Task.Delay(10000);
-
             var point = PointData
                 .Measurement(_measurementName)
                 .Tag("PortName", portName)
