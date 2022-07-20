@@ -1,4 +1,5 @@
-﻿using ComPortHandler.Services;
+﻿using ComPortHandler.Options.Logger.InfoLogger;
+using ComPortHandler.Services;
 using ComPortHandler.Services.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,7 +16,8 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureLogging(loggingBuilder =>
     {
-        loggingBuilder.AddFile($"{Directory.GetCurrentDirectory()}\\Logs\\log.txt");
+        loggingBuilder.AddFile(o => o.RootPath = o.RootPath = AppContext.BaseDirectory);
+        loggingBuilder.AddFile<InfoFileLoggerProvider>(configure: o => o.RootPath = AppContext.BaseDirectory);
     })
     .Build();
 
