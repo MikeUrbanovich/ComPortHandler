@@ -3,12 +3,12 @@ using ComPortHandler.Services.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace ComPortHandler.Services
+namespace ComPortHandler.Services.ListenerService
 {
-    internal class ComPortListenerService
+    internal class ComPortListenerService: IListenerService
     {
         private readonly SerialPort _serialPort;
-        private readonly ILogger<ComPortListenerService> _logger;
+        private readonly ILogger _logger;
         private readonly IDataWorker _dataWorker;
 
         public ComPortListenerService(
@@ -27,7 +27,7 @@ namespace ComPortHandler.Services
         }
 
 
-        private void DataReceivedHandler(
+        public void DataReceivedHandler(
             object sender,
             SerialDataReceivedEventArgs e)
         {
@@ -65,7 +65,7 @@ namespace ComPortHandler.Services
         }
 
         //Waiting for all data will be processed
-        public async Task ClosingPreparationAsync()
+        public void ClosingPreparationAsync()
         {
             _serialPort.DataReceived -= DataReceivedHandler;
             _logger.LogInformation("Stop listening.");
@@ -76,14 +76,7 @@ namespace ComPortHandler.Services
                 _logger.LogInformation("Wait handling all data...");
             }
 
-            try
-            {
-                await _dataWorker.StopDataProcessingAsync();
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
+            _logger.LogInformation("Finish data processing");
         }
 
         public void ClosePort()

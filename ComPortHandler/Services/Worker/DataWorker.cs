@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using ComPortHandler.Services.DbService;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -6,15 +7,15 @@ namespace ComPortHandler.Services.Worker
 {
     public class DataWorker : IDataWorker
     {
-        private readonly ILogger<DataWorker> _logger;
+        private readonly ILogger _logger;
         private readonly IConfiguration _configuration;
-        private readonly InfluxDbService _influxDbService;
+        private readonly IInfluxDbService _influxDbService;
         private Queue<string> _buffer = new ();
-        private Task DbTask { get; set; }
+        private Task? DbTask { get; set; } = null;
 
         public DataWorker(
             ILogger<DataWorker> logger,
-            InfluxDbService influxDbService,
+            IInfluxDbService influxDbService,
             IConfiguration configuration)
         {
             _influxDbService = influxDbService;
@@ -32,7 +33,7 @@ namespace ComPortHandler.Services.Worker
 
             while (true)
             {
-                if (!CheckDataInBuffer())
+                if (_buffer.Count == 0)
                 {
                     continue;
                 }
@@ -49,21 +50,6 @@ namespace ComPortHandler.Services.Worker
             }
         }
 
-        //Wait last async db task.
-        public async Task StopDataProcessingAsync()
-        {
-            try
-            {
-                await DbTask;
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
-
-            _logger.LogInformation("Finish data processing");
-        }
-
         //Add valid data into buffer
         public void AddDataToBuffer(string data)
         {
@@ -73,7 +59,18 @@ namespace ComPortHandler.Services.Worker
             }
         }
 
-        public bool CheckDataInBuffer() => _buffer.Count != 0;
+        public bool CheckDataInBuffer()
+        {
+            if (_buffer.Count != 0)
+                return true;
+
+            return _buffer.Count switch
+            {
+                0 when DbTask == null => false,
+                0 when DbTask.IsCompleted => false,
+                _ => true
+            };
+        }
 
         private bool Validate(string data)
         {

@@ -5,7 +5,5 @@
         void AddDataToBuffer(string data);
         bool CheckDataInBuffer();
         Task StartDataProcessingAsync();
-        Task StopDataProcessingAsync();
-
     }
 }
